@@ -1,0 +1,176 @@
+//
+// Created by Mac book pro on 2023/12/26.
+//
+#include"Ana.h"
+namespace LexAna{
+    Ana::Ana(FILE *fp) {
+        this->fp=fp;
+        this->col=this->row=this->pos=0;
+    }
+
+    Word Ana::getWord() {
+        Word word;
+        static char word_temp[MAX_WORD_LEN];
+        int index=0;
+        char ch;
+        while((ch = fgetc(fp)) != EOF && isspace(ch)){
+            if(ch=='\n'){
+                this->row++;
+                this->col=0;
+            }
+            else{
+                this->col++;
+            }
+            this->pos++;
+            // 跳过空白字符
+        }
+        // 弥补上面的多读了一个字符
+        this->pos++;
+        this->col++;
+        // 如果到达了文件末尾，返回_END
+        if(ch==EOF){
+            word.row=this->row;
+            word.col=this->col;
+            word.pos=this->pos;
+            word.type=_END;
+            return word;
+        }
+        // 开始读取word
+        if(isalpha(ch)){ // 如果是字母
+            do{
+                word_temp[index++]=ch;
+                ch=fgetc(fp);
+                this->col++;
+                this->pos++;
+            }while((isalpha(ch) || isdigit(ch))&&index<MAX_WORD_LEN);
+            if(index==MAX_WORD_LEN){
+                strcpy(word.val.msg, "标识符过长");
+            }
+            else{
+                word_temp[index]='\0';
+                ungetc(ch, fp); // 回退多读的一个字符
+                this->col--;
+                this->pos--;
+                word.type=isKeyWord(word_temp)?KEYWORD:IDENTIFIER;
+                if(word.type==KEYWORD){
+                    for (auto & i : keyWordTable){
+                        if(strcmp(word_temp, i)==0){
+                            word.val.k=static_cast<KEY>(&i-keyWordTable);
+                            break;
+                        }
+                    }
+                }
+                else{
+                    strcpy(word.val.s, word_temp);
+                }
+            }
+        }
+        else if(isdigit(ch)){ // 如果是整数
+            do{
+                word_temp[index++]=ch;
+                ch=fgetc(fp);
+                this->col++;
+                this->pos++;
+            } while(isdigit(ch)&&index<MAX_WORD_LEN);
+            if(index==MAX_WORD_LEN){
+                strcpy(word.val.msg, "数字过长");
+            }
+            else{
+                word_temp[index]='\0';
+                ungetc(ch, fp); // 回退多读的一个字符
+                this->col--;
+                this->pos--;
+                word.type=INTEGER;
+                word.val.i=strtol(word_temp, nullptr, 10);
+            }
+
+        }
+        else{ // 算符或界符或其他错误
+            word_temp[index++]=ch;
+            word_temp[index]='\0';
+            word.type=OPERATOR;
+            switch(ch){
+                case '+':word.val.o=PLUS;break;
+                case '-':word.val.o=MIN;break;
+                case '*':word.val.o=MUL;break;
+                case '/':word.val.o=DIV;break;
+                case '=':word.val.o=EQ;break;
+                case '<':{
+                    ch=fgetc(fp);
+                    this->col++;
+                    this->pos++;
+                    if(ch=='='){
+                        word_temp[index++]=ch;
+                        word_temp[index]='\0';
+                        word.val.o=LE;
+                    }
+                    else if(ch=='>'){
+                        word_temp[index++]=ch;
+                        word_temp[index]='\0';
+                        word.val.o=NEQ;
+                    }
+                    else{
+                        ungetc(ch, fp);
+                        this->col--;
+                        this->pos--;
+                        word.val.o=LT;
+                    }
+                    break;
+                }
+                case '>':{
+                    ch=fgetc(fp);
+                    this->col++;
+                    this->pos++;
+                    if(ch=='='){
+                        word_temp[index++]=ch;
+                        word_temp[index]='\0';
+                        word.val.o=GE;
+                    }
+                    else{
+                        ungetc(ch, fp);
+                        this->col--;
+                        this->pos--;
+                        word.val.o=GT;
+                    }
+                    break;
+                }
+                case ':':{
+                    ch=fgetc(fp);
+                    this->col++;
+                    this->pos++;
+                    if(ch=='='){
+                        word_temp[index++]=ch;
+                        word_temp[index]='\0';
+                        word.val.o=ASSIGN;
+                    }
+                    else{
+                        ungetc(ch, fp);
+                        this->col--;
+                        this->pos--;
+                        word.val.o=COLON;
+                    }
+                    break;
+                }
+                case '(':word.val.o=LP;break;
+                case ')':word.val.o=RP;break;
+                case ',':word.val.o=COMMA;break;
+                case ';':word.val.o=SEMI;break;
+                case '.':word.val.o=PERIOD;break;
+                default:word.type=ERROR;break;
+            }
+        }
+        word.row=this->row;
+        word.col=this->col;
+        word.pos=this->pos;
+        return  word;
+    }
+
+    bool Ana::isKeyWord(const char *word) {
+        for (auto & i : keyWordTable) {
+            if (strcmp(word, i) == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
