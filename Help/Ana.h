@@ -17,6 +17,8 @@ namespace LexAna{
     class Ana{
     public: explicit Ana(FILE *fp);
         Word getWord();
+        Word peekWord();
+        Word peekWord(int n);
     private:
         FILE *fp;
         int row;

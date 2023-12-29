@@ -173,4 +173,22 @@ namespace LexAna{
         }
         return false;
     }
+
+    Word Ana::peekWord() {
+        Word word;
+        long i=ftell(fp);
+        word=getWord();
+        fseek(fp, i, SEEK_SET);
+        return word;
+    }
+
+    Word Ana::peekWord(int n) {
+        Word word;
+        long i=ftell(fp);
+        for(int j=0;j<n;j++){
+            word=getWord();
+        }
+        fseek(fp, i, SEEK_SET);
+        return word;
+    }
 }
