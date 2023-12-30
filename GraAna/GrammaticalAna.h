@@ -36,7 +36,8 @@ namespace GraAna{
             [[nodiscard]] std::string toString() const;
             void addUnit(const Unit& unit);
             [[nodiscard]] std::vector<Unit> getUnits() const;
-            void deleteUnit(int index);
+            void deleteUnit(size_t index);
+            std::fstream& operator<<(std::fstream& out) const;
     };
     // 候选式
     class Candidate{
@@ -51,7 +52,10 @@ namespace GraAna{
         const std::string& filename; // 存储文法的文件名
         std::vector<std::string> extract_candidates(const std::string& rhs);
         std::vector<std::string> parse_alternatives(const std::string& segment,const std::string& prefix);
+        std::map<std::string,std::string> _map;// 用于存储非终结符和终结符的映射
         Unit build_units(const std::string& rhs);
+        void eliminate_left_recursion();
+        std::vector<Candidate> replace_unit(Unit &unit, const std::string & non_terminal); // 将unit中的非终结符替换为non_terminal
     public:
         std::map<std::string, RHS> productions; // 产生式
         std::set<std::string> non_terminals; // 非终结符

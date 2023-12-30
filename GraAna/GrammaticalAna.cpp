@@ -5,6 +5,7 @@
 namespace GraAna{
     void Grammer::read_grammer() {
         std::ifstream file(filename);
+
         std::string line;
         std::regex rule_regex("<([^]+)>→([^\\n]+)"); // 用于匹配并解析文法规则的左侧和右侧。
         // std::regex rule_regex("<(.+?)>→(.+)"); // 这里.+?表示非贪婪匹配任意字符，直到遇到>为止，确保我们只匹配非终结符的名字。
@@ -20,7 +21,52 @@ namespace GraAna{
                 production = std::regex_replace(production, std::regex("\\s+"), ""); // 可选
                 std::cout<<"---------"<<std::endl;
                 std::cout<<non_terminal<<std::endl;
-                non_terminals.insert(non_terminal); // 将非终结符添加到non_terminals中。
+                size_t _pos1=0;
+                while(_pos1<production.length()){
+                    char c=production[_pos1];
+                    if(c=='<'){
+                        size_t _pos2=_pos1+1;
+                        if(_pos2>=production.length()){
+                            throw std::runtime_error("文法规则格式错误");
+                        }
+                        char next_c=production[_pos2];
+                        if(next_c=='='||next_c=='>'){
+                            _pos1+=2; // 跳过<=和<>
+                        }
+                        else{
+                            // 如果是非终结符，我们需要找到它的结束标记。
+                            while (_pos2 < production.length() && production[_pos2] != '>') {
+                                _pos2++;
+                            }
+                            if(_pos2==production.length()){
+                                throw std::runtime_error("文法规则格式错误");
+                            }
+                            else{
+                                std::string _non_terminal = production.substr(_pos1+1, _pos2 - _pos1-1);
+                                // 将非终结符替换为终结符
+
+                                if(_map.find(_non_terminal)!=_map.end()){
+                                    std::cout<<"找到的非终结符: "<<_non_terminal<<std::endl;
+                                    std::cout<<"替换前: "<<production<<std::endl;
+                                    production.replace(_pos1,_pos2-_pos1+1,_map[_non_terminal]);
+                                    std::cout<<"替换后: "<<production<<std::endl;
+                                    _pos1+=_map[_non_terminal].length();
+                                }
+                                else{
+                                    _pos1=_pos2+1;
+                                }
+                            }
+                        }
+                    }
+                    else{
+                        _pos1++;
+                    }
+
+                }
+                _map[non_terminal]=production; // 将非终结符和它的候选式存储到_map中
+
+
+                std::cout<<"最终替换后的语法："+non_terminal+"→"+production<<std::endl;
                 RHS rhs;
                 std::vector<std::string> alternatives = extract_candidates(production);
                 for (const auto& alt : alternatives) {
@@ -28,8 +74,10 @@ namespace GraAna{
                     // 现在得到了候选式，我们需要将它们分解为单个单元。
                     Candidate candidate;
                     candidate.unit = build_units(alt);
+                    std::cout<<"Candidate: "<<candidate.unit.toString()<<std::endl<<std::endl;
                     rhs.candidates.push_back(candidate);
                 }
+                non_terminals.insert(non_terminal); // 将非终结符添加到non_terminals中。
                 productions[non_terminal] = rhs;
 
 
@@ -38,6 +86,7 @@ namespace GraAna{
                 throw std::runtime_error("文法规则格式错误");
             }
         }
+        // eliminate_left_recursion();
         file.close();
 
     }
@@ -122,8 +171,7 @@ namespace GraAna{
     Unit Grammer::build_units(const std::string &rhs) {
         size_t i = 0;
         size_t alt_length = rhs.length();
-        Unit unit;
-        unit.setType(GRAMMAR);
+        Unit unit(GRAMMAR, rhs);
         while(i<alt_length){
             char c = rhs[i];
             if(c=='<'){
@@ -133,10 +181,19 @@ namespace GraAna{
                     i++;
                 }
                 if (i == alt_length) {
-                    // 找不到的话，它是一个小于符号
-                    unit.addUnit(Unit(TERMINAL, std::string(1, c)));
-                    // 恢复i指针
-                    i=start_index-1;
+                    // 找不到的话，它是一个小于符号或小于等于符号或不等于号，我们检查它是否是一个小于等于符号或不等于号。
+                    if(rhs[start_index]=='='){
+                        unit.addUnit(Unit(TERMINAL, "<="));
+                        i=start_index;
+                    }
+                    else if(rhs[start_index]=='>'){
+                        unit.addUnit(Unit(TERMINAL, "<>"));
+                        i=start_index;
+                    }
+                    else{
+                        unit.addUnit(Unit(TERMINAL, "<"));
+                        i=start_index-1;
+                    }
                 }
                 else{
                     std::string non_terminal = rhs.substr(start_index, i - start_index);
@@ -174,12 +231,93 @@ namespace GraAna{
                 unit.addUnit(_unit);
             }
             else{
-                // 如果是终结符，我们只需要将它添加到候选式中。
-                unit.addUnit(Unit(TERMINAL, std::string(1, c)));
+                // 如果是终结符，我们只需要将它添加到候选式中。这个单词可能是个单词，也可能是个符号，所以我们找到空格或换行符或者左括号
+                // 截取之前的部分
+                size_t start_index = i;
+                while (i < alt_length && rhs[i] != ' ' && rhs[i] != '\n'&& rhs[i] != '['&& rhs[i] != '{'&& rhs[i] != '<') {
+                    i++;
+                }
+                std::string terminal = rhs.substr(start_index, i - start_index);
+                unit.addUnit(Unit(TERMINAL, terminal));
+                if(!(rhs[i]==' '||rhs[i]=='\n')){
+                    i--;
+                }
             }
             i++;
         }
         return unit;
+    }
+
+    void Grammer::eliminate_left_recursion() {
+        // 先进行非终结符的排序
+        std::cout<<"开始进行非终结符排序"<<std::endl;
+        std::vector<std::string> non_terminals_sorted(non_terminals.size());
+        std::copy(non_terminals.begin(), non_terminals.end(), non_terminals_sorted.begin());
+        std::sort(non_terminals_sorted.begin(), non_terminals_sorted.end(), [](const std::string& a, const std::string& b) {
+            return a.length() < b.length();
+        });
+        std::cout<<"排序结果: "<<std::endl;
+        for (const auto& non_terminal : non_terminals_sorted) {
+            std::cout << non_terminal << std::endl;
+        }
+        std::cout<<std::endl;
+        std::cout<<"开始进行非终结符置换"<<std::endl;
+//        for(size_t i=1;i<non_terminals_sorted.size();++i){
+//            for(size_t j=0;j<i;++j){
+//                std::string A=non_terminals_sorted[i]; // A->B
+//                std::string B=non_terminals_sorted[j];
+//                auto rhs_A=productions[A].candidates;
+//                auto  rhs_B=productions[B].candidates;
+//                // 查看A的左侧的候选式是否有B
+//                for(auto& candidate_A:rhs_A){
+//                   // a的候选式包含多个单元，需要遍历每个单元
+//                    for(auto& unit:candidate_A.unit.getUnits()){
+//                        // 由于单元的递归性，需要递归地进行替换
+//
+//                    }
+//                }
+//            }
+//        }
+
+    }
+
+    std::vector<Candidate>  Grammer::replace_unit(Unit &unit, const std::string &non_terminal) {
+        // 先拿到non_terminal的候选式
+        auto rhs=productions[non_terminal].candidates;
+        if(unit.getType()==NON_TERMINAL){
+            if(unit.getName()==non_terminal){
+                // 如果是匹配的非终结符，直接替换
+                return rhs;
+            }
+            else{
+                // 如果不是匹配的非终结符，直接返回
+                return {};
+            }
+        }
+        else{
+            // 递归地替换，如果替换成功，就将替换后的候选式添加到unit中，并删除原来的单元
+            std::vector<Unit> units=unit.getUnits();
+            std::vector<Candidate> candidates;
+            // 为了避免运行时删除元素导致的迭代器失效，我们先将要删除的元素的下标存储起来
+            std::vector<size_t> indexs;
+            for(size_t i=0;i<units.size();++i){
+                Candidate candidate;
+                auto _rhs=replace_unit(units[i],non_terminal);
+                if(!_rhs.empty()){
+                    indexs.push_back(i);
+                    // 替换成功，将替换后的候选式添加到unit中
+                    for(auto& candidate:_rhs){
+                        unit.addUnit(candidate.unit);
+                    }
+                }
+            }
+            // 倒着删除
+            for(auto iter=indexs.rbegin();iter!=indexs.rend();++iter){
+                unit.deleteUnit(*iter);
+            }
+            return candidates;
+
+        }
     }
 
     GTYPE Unit::getType() const {
@@ -199,17 +337,49 @@ namespace GraAna{
     }
 
     std::string Unit::toString() const {
-        switch (type){
-            case TERMINAL:
-                return name;
-            case NON_TERMINAL:
-                return "<"+name+">";
-            case OPTIONAL:
-                return "("+name+")";
-            case REPEATABLE:
-                return "{"+name+"}";
-            default:
-                return "";
+        if(units.empty()){
+            switch (type){
+                case TERMINAL:
+                    return name;
+                case NON_TERMINAL:
+                    return "<"+name+">";
+                case OPTIONAL:
+                    return "["+name+"]";
+                case REPEATABLE:
+                    return "{"+name+"}";
+                case GRAMMAR:
+                    return name;
+                default:
+                    return name;
+            }
+        }
+        else{
+            std::string str;
+            switch (type){
+                case TERMINAL:
+                    str=name;
+                    break;
+                case NON_TERMINAL:
+                    str="<"+name+">";
+                    break;
+                case OPTIONAL:
+                    str="["+name+"]";
+                    break;
+                case REPEATABLE:
+                    str="{"+name+"}";
+                    break;
+                case GRAMMAR:
+                    str=name;
+                    break;
+                default:
+                    str="";
+                    break;
+            }
+            str+="->";
+            for (const auto& unit : units) {
+                str+=unit.toString()+" ";
+            }
+            return str;
         }
     }
 
@@ -221,10 +391,16 @@ namespace GraAna{
         return units;
     }
 
-    void Unit::deleteUnit(int index) {
+    void Unit::deleteUnit(size_t index) {
         if(index>=0 && index<units.size()){
             units.erase(units.begin()+index);
         }
     }
+
+    std::fstream &Unit::operator<<(std::fstream &out) const {
+        out<<toString();
+        return out;
+    }
+
 }
 
