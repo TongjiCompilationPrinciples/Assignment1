@@ -4,6 +4,8 @@ project(compiling)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(compiling main.cpp
-        Help/Ana.h
-        Help/Ana.cpp
-        Help/Deceleration.h)
+        LexAna/Ana.h
+        LexAna/Ana.cpp
+        LexAna/Deceleration.h
+        GraAna/GrammaticalAna.h
+        GraAna/GrammaticalAna.cpp)
