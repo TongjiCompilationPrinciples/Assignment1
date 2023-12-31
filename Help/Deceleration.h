@@ -28,6 +28,7 @@ namespace LexAna{
         IF=8, // if
         THEN=9 // then
     }KEY; // 关键字的具体类型
+
     typedef enum{
         PLUS=1, // +
         MIN=2, // -
@@ -47,6 +48,7 @@ namespace LexAna{
         PERIOD=16, // .
         COLON=17 // :
     }OPorDEL; // 运算符或界符的具体类型
+
     union Val{
         long i; // 整数
         char s[20]; // 标识符
@@ -65,6 +67,38 @@ namespace LexAna{
             type=ERROR; // 默认为错误
         }
     };
+
+    typedef enum{
+        ADD=1, // +
+        SUB=2, // -
+        MUL=3, // *
+        DIV=4, // /
+        BEC=5, // :=
+        JEQL=6, // =
+        JNEQ=7, // <>
+        JGT=8, // >
+        JGE=9, // >=
+        JLT=10, // <
+        JLE=11, // <=
+    }FCT; //中间代码指令
+    struct tCode{
+        FCT fct;    //指令
+        long p1;    //操作数1符号表索引（地址）
+        long p2;    //操作数2
+        long res;   //结果数
+    };
+
+    typedef enum{
+        constant=0, //常量
+        variable=1, //变量
+        interVar=2, //中间变量
+    }ItemType;
+    struct SymTableItem{
+        char name[20];      // 标识符
+        ItemType type;      //变量类型
+        long value;         //值
+    };
+    
 }
 
 #endif //COMPILING_DECELERATION_H
