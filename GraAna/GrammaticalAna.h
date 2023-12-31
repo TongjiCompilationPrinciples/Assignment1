@@ -56,6 +56,11 @@ namespace GraAna{
         std::map<std::string,std::set<std::string>> first_set;// first集
         std::map<std::string,std::set<std::string>> follow_set;// follow集
         Unit build_units(const std::string& rhs);
+        static std::string longest_common_prefix(const std::string& str1,const std::string& str2);
+        template<typename T>
+        static void eleminate_repeatable(std::vector<T>&vec);
+        std::string find_most_common_refix(const std::vector<std::string>& strings);// 找到该集合拥有最多候选式的前缀
+        std::vector<std::string> extract_left_factors(std::vector<std::string> candidates);// 提取左因子
     public:
         std::map<std::string, RHS> productions; // 产生式
         std::set<std::string> non_terminals; // 非终结符

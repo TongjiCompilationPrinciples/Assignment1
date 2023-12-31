@@ -106,14 +106,7 @@ namespace GraAna{
                 RHS rhs;
                 std::vector<std::string> alternatives = extract_candidates(production);
                 // 对候选式去重
-                std::set<std::string> _set;
-                for(const auto& alt:alternatives){
-                    _set.insert(alt);
-                }
-                alternatives.clear();
-                for(const auto& alt:_set){
-                    alternatives.push_back(alt);
-                }
+                eleminate_repeatable(alternatives);
                 std::set<std::string> alpha; // 存放当前非终结符开头的候选式（左递归下的候选式剩余部分）
                 std::set<std::string> beta; // 存放非当前非终结符开头的候选式
                 bool flag=false;
@@ -154,34 +147,12 @@ namespace GraAna{
                         beta.insert(alt);
                     }
                 }
-                // 对alpha和beta进行去重
-                _set.clear();
-                for(const auto& alt:alpha){
-                    _set.insert(alt);
-                }
-                alpha.clear();
-                for(const auto& alt:_set){
-                    alpha.insert(alt);
-                }
-                _set.clear();
-                for(const auto& alt:beta){
-                    _set.insert(alt);
-                }
-                beta.clear();
-                for(const auto& alt:_set){
-                    beta.insert(alt);
-                }
                 if(!flag){ // 没有左递归
                     alternatives = extract_candidates(production);
                     // 对候选式去重
-                    _set.clear();
-                    for(const auto& alt:alternatives){
-                        _set.insert(alt);
-                    }
-                    alternatives.clear();
-                    for(const auto& alt:_set){
-                        alternatives.push_back(alt);
-                    }
+                    eleminate_repeatable(alternatives);
+                    // 提取候选式的公共左因子，确保所有候选首部集两两不相交
+
 
                     for (const auto& alt : alternatives) {
                         Candidate candidate;
@@ -207,14 +178,7 @@ namespace GraAna{
                     RHS new_rhs;
                     std::vector<std::string> new_alternatives = extract_candidates(new_production);
                     // 对候选式去重
-                    _set.clear();
-                    for(const auto& alt:new_alternatives){
-                        _set.insert(alt);
-                    }
-                    new_alternatives.clear();
-                    for(const auto& alt:_set){
-                        new_alternatives.push_back(alt);
-                    }
+                    eleminate_repeatable(new_alternatives);
                     for (const auto& alt : new_alternatives) {
                         Candidate candidate;
                         candidate.unit = build_units(alt);
@@ -414,6 +378,69 @@ namespace GraAna{
 
     void Grammer::calculate_follow_set() {
 
+    }
+
+    std::string Grammer::longest_common_prefix(const std::string &str1, const std::string &str2) {
+        size_t minLength = std::min(str1.length(), str2.length());
+        for (int i = 0; i < minLength; ++i) {
+            if (str1[i] != str2[i]) {
+                return str1.substr(0, i);
+            }
+        }
+        return str1.substr(0, minLength);
+    }
+
+    std::map<std::string, std::vector<std::string>>
+    Grammer::group_by_prefix(const std::vector<std::string> &candidates) {
+        std::map<std::string, std::vector<std::string>> prefixGroups;
+        for(size_t i=0;i<candidates.size();i++){
+            for(size_t j=i+1;j<candidates.size();j++){
+                std::string prefix = longest_common_prefix(candidates[i], candidates[j]);
+                if(!prefix.empty()){
+                    prefixGroups[prefix].push_back(candidates[i]);
+                    prefixGroups[prefix].push_back(candidates[j]);
+                }
+            }
+        }
+    }
+
+    std::string Grammer::find_most_common_refix(const std::vector<std::string> &strings) {
+        if (strings.empty()) return "";
+        std::string prefix = strings[0];
+        for (const std::string& str : strings) {
+            prefix = longest_common_prefix(prefix, str);
+            if (prefix.empty()) break;
+        }
+        return prefix;
+    }
+
+    std::vector<std::string> Grammer::extract_left_factors(std::vector<std::string> candidates) {
+        std::vector<std::string> factoredProductions;// 拥有公共左因子的候选式
+        std::map<std::string, std::vector<std::string>> groups;
+        while(!candidates.empty()){
+            for (const std::string& candidate : candidates) {
+                if (!candidate.empty()) {
+                    groups[candidate.substr(0, 1)].push_back(candidate);// 以第一个字符为键，将候选式分组
+                }
+            }
+            // 找到拥有最多候选式的最长前缀
+            std::string longestPrefix;
+            std::vector<std::string>* longestGroup = nullptr;
+            for (auto& group : groups) {
+                std::string currentPrefix = find_most_common_refix(group.second);
+                if (currentPrefix.length() > longestPrefix.length() ||
+                    (currentPrefix.length() == longestPrefix.length() && group.second.size() > longestGroup->size())) {
+                    longestPrefix = currentPrefix;
+                    longestGroup = &group.second;
+                }
+            }
+        }
+    }
+
+    template<typename T>
+    void Grammer::eleminate_repeatable(std::vector<T> &vec) {
+        std::set<T> s(vec.begin(),vec.end());
+        vec.assign(s.begin(),s.end());
     }
 
     GTYPE Unit::getType() const {
