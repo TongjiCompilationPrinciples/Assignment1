@@ -7,8 +7,8 @@ namespace GraAna{
         std::ifstream file(filename);
 
         std::string line;
-        std::regex rule_regex("<([^]+)>→([^\\n]+)"); // 用于匹配并解析文法规则的左侧和右侧。
-        // std::regex rule_regex("<(.+?)>→(.+)"); // 这里.+?表示非贪婪匹配任意字符，直到遇到>为止，确保我们只匹配非终结符的名字。
+        //std::regex rule_regex("<([^]+)>→([^\\n]+)"); // 用于匹配并解析文法规则的左侧和右侧。
+         std::regex rule_regex("<(.+?)>→(.+)"); // 这里.+?表示非贪婪匹配任意字符，直到遇到>为止，确保我们只匹配非终结符的名字。
 
         // 这里\$$.+?\$$和\\{.+?\\}分别用来匹配可选项和可重复项，<.+?>用来匹配非终结符，\\S+用来匹配终结符和其他符号。
         std::smatch match;
@@ -26,64 +26,222 @@ namespace GraAna{
                     char c=production[_pos1];
                     if(c=='<'){
                         size_t _pos2=_pos1+1;
-                        if(_pos2>=production.length()){
-                            throw std::runtime_error("文法规则格式错误");
-                        }
-                        char next_c=production[_pos2];
-                        if(next_c=='='||next_c=='>'){
-                            _pos1+=2; // 跳过<=和<>
-                        }
-                        else{
-                            // 如果是非终结符，我们需要找到它的结束标记。
-                            while (_pos2 < production.length() && production[_pos2] != '>') {
-                                _pos2++;
-                            }
-                            if(_pos2==production.length()){
-                                throw std::runtime_error("文法规则格式错误");
+                        if(_pos2<production.length()){
+                            char next_c=production[_pos2];
+                            if(next_c=='='||next_c=='>'){
+                                _pos1+=2; // 跳过<=和<>
                             }
                             else{
-                                std::string _non_terminal = production.substr(_pos1+1, _pos2 - _pos1-1);
-                                // 将非终结符替换为终结符
-
-                                if(_map.find(_non_terminal)!=_map.end()){
-                                    std::cout<<"找到的非终结符: "<<_non_terminal<<std::endl;
-                                    std::cout<<"替换前: "<<production<<std::endl;
-                                    production.replace(_pos1,_pos2-_pos1+1,_map[_non_terminal]);
-                                    std::cout<<"替换后: "<<production<<std::endl;
-                                    _pos1+=_map[_non_terminal].length();
+                                // 如果是非终结符，我们需要找到它的结束标记。
+                                while (_pos2 < production.length() && production[_pos2] != '>') {
+                                    _pos2++;
+                                }
+                                if(_pos2==production.length()){
+                                    throw std::runtime_error("文法规则格式错误");
                                 }
                                 else{
-                                    _pos1=_pos2+1;
+                                    std::string _non_terminal = production.substr(_pos1+1, _pos2 - _pos1-1);
+                                    // 将非终结符替换为终结符
+                                    if(_map.find(_non_terminal)!=_map.end()){
+                                        std::cout<<"找到的非终结符: "<<_non_terminal<<std::endl;
+                                        std::cout<<"替换前: "<<production<<std::endl;
+                                        std::vector<std::string> _alternatives = extract_candidates(_map[_non_terminal]);
+                                        // 给替换后的候选式添加前缀和后缀
+                                        // 如果候选式之前是|，就不用添加前缀了
+                                        // 如果候选式之后是|，就不用添加后缀了
+                                        bool isneed_prefix=true;
+                                        bool isneed_suffix=true;
+                                        if(_pos1>0&&production[_pos1-1]=='|'){
+                                            isneed_prefix=false;
+                                        }
+                                        if(_pos2+1<production.length() && production[_pos2+1]=='|'){
+                                            isneed_suffix=false;
+                                        }
+                                        for (auto& alt : _alternatives) {
+                                            if(isneed_prefix){
+                                                alt = production.substr(0,_pos1)+alt;
+                                            }
+                                            if(isneed_suffix){
+                                                alt += production.substr(_pos2+1);
+                                            }
+                                        }
+
+                                        // 用|将替换后的候选式连接起来
+                                        std::string _production;
+                                        // 如果没有添加前缀，则把原来的前缀加上
+                                        if(!isneed_prefix){
+                                            _production=production.substr(0,_pos1);
+                                        }
+                                        for(const auto& alt:_alternatives){
+                                            _production+=alt+"|";
+                                        }
+                                        size_t _new_pos1=_production.length();
+                                        // 如果没有添加后缀，则把原来的后缀加上
+                                        if(!isneed_suffix){
+                                            _production+=production.substr(_pos2+2);
+                                        }
+                                        // 如果最后一个字符是|，还要删去
+                                        if(_production[_production.length()-1]=='|'){
+                                            _production=_production.substr(0,_production.length()-1);
+                                        }
+                                        production=_production;
+                                        std::cout<<"替换后: "<<production<<std::endl;
+                                        // 设置_pos1的位置
+                                        _pos1=_new_pos1;
+                                    }
+                                    else{
+                                        _pos1=_pos2+1;
+                                    }
                                 }
                             }
                         }
+
                     }
                     else{
                         _pos1++;
                     }
 
                 }
-                _map[non_terminal]=production; // 将非终结符和它的候选式存储到_map中
-
-
                 std::cout<<"最终替换后的语法："+non_terminal+"→"+production<<std::endl;
                 RHS rhs;
                 std::vector<std::string> alternatives = extract_candidates(production);
+                // 对候选式去重
+                std::set<std::string> _set;
+                for(const auto& alt:alternatives){
+                    _set.insert(alt);
+                }
+                alternatives.clear();
+                for(const auto& alt:_set){
+                    alternatives.push_back(alt);
+                }
+                std::set<std::string> alpha; // 存放当前非终结符开头的候选式（左递归下的候选式剩余部分）
+                std::set<std::string> beta; // 存放非当前非终结符开头的候选式
+                bool flag=false;
                 for (const auto& alt : alternatives) {
                     std::cout << "Alternative: " << alt << std::endl;
-                    // 现在得到了候选式，我们需要将它们分解为单个单元。
-                    Candidate candidate;
-                    candidate.unit = build_units(alt);
-                    std::cout<<"Candidate: "<<candidate.unit.toString()<<std::endl<<std::endl;
-                    rhs.candidates.push_back(candidate);
+                    // 存放非当前非终结符开头的候选式
+                    _pos1=0;
+                    bool _flag=false;
+                    char c=alt[_pos1];
+                    if(c=='<'){
+                        size_t _pos2=_pos1+1;
+                        if(_pos2<alt.length()){ // 如果不是最后一个字符
+                            char next_c=alt[_pos2];
+                            if(next_c!='='&&next_c!='>'){
+                                // 如果是非终结符，我们需要找到它的结束标记。
+                                _pos2++;
+                                while (_pos2 < alt.length() && alt[_pos2] != '>') {
+                                    _pos2++;
+                                }
+                                if(_pos2==alt.length()){
+                                    throw std::runtime_error("文法规则格式错误2");
+                                }
+                                else{
+                                    std::string _non_terminal = alt.substr(_pos1+1, _pos2 - _pos1-1);
+                                    if(_non_terminal==non_terminal){// 左递归
+                                        std::cout<<"发现左递归！"<<std::endl;
+                                        flag=_flag=true;
+                                        alpha.insert(alt.substr(_pos2+1)); // 将剩余部分添加到alpha中
+                                    }
+                                    else{
+                                        // 不是当前非终结符开头的候选式
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if(!_flag){ // 当前候选式不是左递归
+                        beta.insert(alt);
+                    }
+                }
+                // 对alpha和beta进行去重
+                _set.clear();
+                for(const auto& alt:alpha){
+                    _set.insert(alt);
+                }
+                alpha.clear();
+                for(const auto& alt:_set){
+                    alpha.insert(alt);
+                }
+                _set.clear();
+                for(const auto& alt:beta){
+                    _set.insert(alt);
+                }
+                beta.clear();
+                for(const auto& alt:_set){
+                    beta.insert(alt);
+                }
+                if(!flag){ // 没有左递归
+                    alternatives = extract_candidates(production);
+                    // 对候选式去重
+                    _set.clear();
+                    for(const auto& alt:alternatives){
+                        _set.insert(alt);
+                    }
+                    alternatives.clear();
+                    for(const auto& alt:_set){
+                        alternatives.push_back(alt);
+                    }
+
+                    for (const auto& alt : alternatives) {
+                        Candidate candidate;
+                        candidate.unit = build_units(alt);
+                        std::cout<<"Candidate: "<<candidate.unit.toString()<<std::endl<<std::endl;
+                        rhs.candidates.push_back(candidate);
+                    }
+                }
+                else{
+                    // 有左递归
+                    // 添加新的非终结符
+                    std::string new_non_terminal=non_terminal+"'";
+                    // 对应的新的候选式
+                    std::string new_production;
+                    for(const auto& alt:alpha){
+                        new_production+=alt+"<"+new_non_terminal+">|";
+                    }
+                    // 加入空集符号
+                    new_production+="ε";
+                    // 将新的非终结符和新的候选式添加到_map中
+                    _map[new_non_terminal]=new_production;
+                    std::cout<<"新增加的文法规则为："+new_non_terminal+"→"+new_production<<std::endl;
+                    RHS new_rhs;
+                    std::vector<std::string> new_alternatives = extract_candidates(new_production);
+                    // 对候选式去重
+                    _set.clear();
+                    for(const auto& alt:new_alternatives){
+                        _set.insert(alt);
+                    }
+                    new_alternatives.clear();
+                    for(const auto& alt:_set){
+                        new_alternatives.push_back(alt);
+                    }
+                    for (const auto& alt : new_alternatives) {
+                        Candidate candidate;
+                        candidate.unit = build_units(alt);
+                        std::cout<<"Candidate: "<<candidate.unit.toString()<<std::endl<<std::endl;
+                        new_rhs.candidates.push_back(candidate);
+                    }
+                    non_terminals.insert(new_non_terminal);
+                    productions[new_non_terminal]=new_rhs;
+                    // 将beta中的候选式添加到当前非终结符的候选式中
+                    production="";
+                    for(const auto& alt:beta){
+                        Candidate candidate;
+                        candidate.unit = build_units(alt+"<"+new_non_terminal+">");
+                        std::cout<<"Candidate: "<<candidate.unit.toString()<<std::endl<<std::endl;
+                        rhs.candidates.push_back(candidate);
+                        production+=alt+"<"+new_non_terminal+">|";
+                    }
+                    production=production.substr(0,production.length()-1);
+
                 }
                 non_terminals.insert(non_terminal); // 将非终结符添加到non_terminals中。
                 productions[non_terminal] = rhs;
-
-
+                _map[non_terminal]=production; // 将非终结符和它的候选式存储到_map中
             }
             else{
-                throw std::runtime_error("文法规则格式错误");
+                continue;
+                //throw std::runtime_error("文法规则格式错误3");
             }
         }
         // eliminate_left_recursion();
@@ -115,7 +273,7 @@ namespace GraAna{
                 if (depth == 0) { // 如果深度为0，说明找到了匹配的右括号或右花括号。
                     std::string inner_segment = segment.substr(start_index, i - start_index);
                     std::vector<std::string> inner_alternatives = parse_alternatives(inner_segment, "");// 递归调用,得到内部的候选式
-                    size_t pos=std::min(i+1,segment_length);
+                    size_t pos=i+1;
                     // 求出下一个候选式的开始的位置，在它到|之前应该没有左花括号
                     int _depth=0;
                     while(pos<segment_length){
@@ -144,6 +302,7 @@ namespace GraAna{
                     }
                     // 跳到pos的位置
                     i=pos+1;
+                    buffer=prefix;
                     if(i>=segment_length){
                         return alternatives;
                     }
@@ -248,76 +407,13 @@ namespace GraAna{
         return unit;
     }
 
-    void Grammer::eliminate_left_recursion() {
-        // 先进行非终结符的排序
-        std::cout<<"开始进行非终结符排序"<<std::endl;
-        std::vector<std::string> non_terminals_sorted(non_terminals.size());
-        std::copy(non_terminals.begin(), non_terminals.end(), non_terminals_sorted.begin());
-        std::sort(non_terminals_sorted.begin(), non_terminals_sorted.end(), [](const std::string& a, const std::string& b) {
-            return a.length() < b.length();
-        });
-        std::cout<<"排序结果: "<<std::endl;
-        for (const auto& non_terminal : non_terminals_sorted) {
-            std::cout << non_terminal << std::endl;
-        }
-        std::cout<<std::endl;
-        std::cout<<"开始进行非终结符置换"<<std::endl;
-//        for(size_t i=1;i<non_terminals_sorted.size();++i){
-//            for(size_t j=0;j<i;++j){
-//                std::string A=non_terminals_sorted[i]; // A->B
-//                std::string B=non_terminals_sorted[j];
-//                auto rhs_A=productions[A].candidates;
-//                auto  rhs_B=productions[B].candidates;
-//                // 查看A的左侧的候选式是否有B
-//                for(auto& candidate_A:rhs_A){
-//                   // a的候选式包含多个单元，需要遍历每个单元
-//                    for(auto& unit:candidate_A.unit.getUnits()){
-//                        // 由于单元的递归性，需要递归地进行替换
-//
-//                    }
-//                }
-//            }
-//        }
+
+    void Grammer::calculate_first_set() {
 
     }
 
-    std::vector<Candidate>  Grammer::replace_unit(Unit &unit, const std::string &non_terminal) {
-        // 先拿到non_terminal的候选式
-        auto rhs=productions[non_terminal].candidates;
-        if(unit.getType()==NON_TERMINAL){
-            if(unit.getName()==non_terminal){
-                // 如果是匹配的非终结符，直接替换
-                return rhs;
-            }
-            else{
-                // 如果不是匹配的非终结符，直接返回
-                return {};
-            }
-        }
-        else{
-            // 递归地替换，如果替换成功，就将替换后的候选式添加到unit中，并删除原来的单元
-            std::vector<Unit> units=unit.getUnits();
-            std::vector<Candidate> candidates;
-            // 为了避免运行时删除元素导致的迭代器失效，我们先将要删除的元素的下标存储起来
-            std::vector<size_t> indexs;
-            for(size_t i=0;i<units.size();++i){
-                Candidate candidate;
-                auto _rhs=replace_unit(units[i],non_terminal);
-                if(!_rhs.empty()){
-                    indexs.push_back(i);
-                    // 替换成功，将替换后的候选式添加到unit中
-                    for(auto& candidate:_rhs){
-                        unit.addUnit(candidate.unit);
-                    }
-                }
-            }
-            // 倒着删除
-            for(auto iter=indexs.rbegin();iter!=indexs.rend();++iter){
-                unit.deleteUnit(*iter);
-            }
-            return candidates;
+    void Grammer::calculate_follow_set() {
 
-        }
     }
 
     GTYPE Unit::getType() const {
@@ -375,7 +471,7 @@ namespace GraAna{
                     str="";
                     break;
             }
-            str+="->";
+            str+="-> ";
             for (const auto& unit : units) {
                 str+=unit.toString()+" ";
             }

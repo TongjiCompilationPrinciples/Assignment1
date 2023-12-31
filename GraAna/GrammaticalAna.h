@@ -53,16 +53,17 @@ namespace GraAna{
         std::vector<std::string> extract_candidates(const std::string& rhs);
         std::vector<std::string> parse_alternatives(const std::string& segment,const std::string& prefix);
         std::map<std::string,std::string> _map;// 用于存储非终结符和终结符的映射
+        std::map<std::string,std::set<std::string>> first_set;// first集
+        std::map<std::string,std::set<std::string>> follow_set;// follow集
         Unit build_units(const std::string& rhs);
-        void eliminate_left_recursion();
-        std::vector<Candidate> replace_unit(Unit &unit, const std::string & non_terminal); // 将unit中的非终结符替换为non_terminal
     public:
         std::map<std::string, RHS> productions; // 产生式
         std::set<std::string> non_terminals; // 非终结符
         std::set<std::string> terminals; // 终结符
         void read_grammer();
+        void calculate_first_set();
+        void calculate_follow_set();
         explicit Grammer(const std::string& filename):filename(filename){};
-
     };
 }
 #endif //COMPILING_GRAMMATICALANA_H
