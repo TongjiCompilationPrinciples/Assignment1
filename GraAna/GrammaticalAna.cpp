@@ -390,19 +390,6 @@ namespace GraAna{
         return str1.substr(0, minLength);
     }
 
-    std::map<std::string, std::vector<std::string>>
-    Grammer::group_by_prefix(const std::vector<std::string> &candidates) {
-        std::map<std::string, std::vector<std::string>> prefixGroups;
-        for(size_t i=0;i<candidates.size();i++){
-            for(size_t j=i+1;j<candidates.size();j++){
-                std::string prefix = longest_common_prefix(candidates[i], candidates[j]);
-                if(!prefix.empty()){
-                    prefixGroups[prefix].push_back(candidates[i]);
-                    prefixGroups[prefix].push_back(candidates[j]);
-                }
-            }
-        }
-    }
 
     std::string Grammer::find_most_common_refix(const std::vector<std::string> &strings) {
         if (strings.empty()) return "";

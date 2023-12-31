@@ -67,6 +67,12 @@ build CMakeFiles/compiling.dir/GraAna/GrammaticalAna.cpp.o: CXX_COMPILER__compil
   OBJECT_DIR = CMakeFiles/compiling.dir
   OBJECT_FILE_DIR = CMakeFiles/compiling.dir/GraAna
 
+build CMakeFiles/compiling.dir/GraAna/RGraAna.cpp.o: CXX_COMPILER__compiling_unscanned_Debug /Users/mac/CLionProjects/compiling/GraAna/RGraAna.cpp || cmake_object_order_depends_target_compiling
+  DEP_FILE = CMakeFiles/compiling.dir/GraAna/RGraAna.cpp.o.d
+  FLAGS = -g -std=gnu++17 -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk -mmacosx-version-min=12.7 -fcolor-diagnostics
+  OBJECT_DIR = CMakeFiles/compiling.dir
+  OBJECT_FILE_DIR = CMakeFiles/compiling.dir/GraAna
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target compiling
@@ -75,7 +81,7 @@ build CMakeFiles/compiling.dir/GraAna/GrammaticalAna.cpp.o: CXX_COMPILER__compil
 #############################################
 # Link the executable compiling
 
-build compiling: CXX_EXECUTABLE_LINKER__compiling_Debug CMakeFiles/compiling.dir/main.cpp.o CMakeFiles/compiling.dir/LexAna/Ana.cpp.o CMakeFiles/compiling.dir/GraAna/GrammaticalAna.cpp.o
+build compiling: CXX_EXECUTABLE_LINKER__compiling_Debug CMakeFiles/compiling.dir/main.cpp.o CMakeFiles/compiling.dir/LexAna/Ana.cpp.o CMakeFiles/compiling.dir/GraAna/GrammaticalAna.cpp.o CMakeFiles/compiling.dir/GraAna/RGraAna.cpp.o
   FLAGS = -g -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX13.1.sdk -mmacosx-version-min=12.7
   OBJECT_DIR = CMakeFiles/compiling.dir
   POST_BUILD = :

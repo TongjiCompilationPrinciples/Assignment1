@@ -1,6 +1,7 @@
 #include <iostream>
 #include"LexAna/Ana.h"
 #include "GraAna/GrammaticalAna.h"
+#include "GraAna/RGraAna.h"
 
 using namespace LexAna;
 int main() {
@@ -39,7 +40,7 @@ int main() {
     std::cout << "====== LexAnx Test End ======" << std::endl;
 
     std::cout<<"====== GraAna Test Begin ======"<<std::endl;
-    GraAna::Grammer grammer("../grammer.txt");
-    grammer.read_grammer();
+    GraAna::RGraAna grammer("../grammer.txt");
+    grammer.init();
     std::cout<<"====== GraAna Test End ======"<<std::endl;
 }

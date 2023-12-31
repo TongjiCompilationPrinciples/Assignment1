@@ -8,4 +8,6 @@ add_executable(compiling main.cpp
         LexAna/Ana.cpp
         LexAna/Deceleration.h
         GraAna/GrammaticalAna.h
-        GraAna/GrammaticalAna.cpp)
+        GraAna/GrammaticalAna.cpp
+        GraAna/RGraAna.cpp
+        GraAna/RGraAna.h)
