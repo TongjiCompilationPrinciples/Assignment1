@@ -27,7 +27,7 @@
 
 ### block分程序递归下降
 
-> 分程序可以推到为“”
+> 分程序可以推到为`[常量说明][变量说明]<语句>`
 
 ```c++
 void block(unsigned long fsys)
