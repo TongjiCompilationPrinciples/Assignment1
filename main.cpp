@@ -76,7 +76,7 @@ void error() {
 }
 
 // 生成一条中间代码并存入表中
-void gen(FCT op, tCodeItem& p1, tCodeItem& p2, tCodeItem& res) {
+void gen(FCT op, tCodeItem p1, tCodeItem p2, tCodeItem res) {
     transitionalCodes[nextTCode].fct = op;
     transitionalCodes[nextTCode].p1 = p1;
     transitionalCodes[nextTCode].p2 = p2;
@@ -244,7 +244,7 @@ bool statement() {
 
         // 记录<表达式>结果的对应中间变量索引，并生成中间代码：{resIndex} = {tmp1Index}
         long tmp1Index = nextSym - 1;
-        gen(FCT(assignop.val.o), {1, tmp1Index}, {unsigned char(-1), -1}, {1, resIndex});
+        gen(FCT(assignop.val.o), {1, tmp1Index}, {(unsigned char)-1, -1}, {1, resIndex});
     
         // 没有推空
         isNull = false;
