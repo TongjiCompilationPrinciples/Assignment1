@@ -80,9 +80,10 @@ namespace LexAna{
         JGE=9, // >=
         JLT=10, // <
         JLE=11, // <=
+        JUP=12, // 无条件jump
     }; //中间代码指令
     struct tCodeItem{   //中间代码操作数（可为直接数/标识符）
-        unsigned char type;      //-1为不需要 0为立即数，1为标识符
+        unsigned char type;      //-1为空 0为立即数，1为标识符/中间变量
         long value;
     };
     struct tCode{

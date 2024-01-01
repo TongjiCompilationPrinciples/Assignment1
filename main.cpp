@@ -68,10 +68,11 @@ std::string fctString[] = {
     "JGE",          // >=
     "JLT",          // <
     "JLE",          // <=
+    "JUP",          // jump
 };
 
 void block();
-void expression();
+tCodeItem expression();
 void condition();
 bool statement();
 long position(char*);
@@ -95,10 +96,12 @@ void printTCode(tCode& code) {
     std::cout<<"("<<fctString[static_cast<int>(code.fct)]<<", ";
 
     // 判断操作数是 标识符 还是 直接数
-    if(code.p1.type) {
+    if(code.p1.type == (unsigned char)1) {
         std::cout<<symTable[code.p1.value].name;
-    } else {
+    } else if(code.p1.type == (unsigned char)0){
         std::cout<<code.p1.value;
+    } else {
+        std::cout<<'-';
     }
     std::cout<<", ";
     
@@ -117,6 +120,12 @@ void printTCode(tCode& code) {
         std::cout<<code.res.value;
     }
     std::cout<<")"<<std::endl;
+}
+
+void printSymTable() {
+    for(int i = 0;i < nextSym; i++) {
+        std::cout<<symTable[i].name<<' '<<symTable[i].type<<' '<<symTable[i].value<<std::endl;
+    }
 }
 
 // <常量定义> -> <标识符> := <无符号整数>：将对应常量登记到符号表（需要报错）
@@ -223,13 +232,15 @@ bool statement() {
     // 赋值语句
     if(sym.type == IDENTIFIER) {
         // 寻找对应标识符的变量索引
-        long resIndex = position(sym.val.s);
+        long resSymIndex = position(sym.val.s);
 
         //标识符未定义
-        if(resIndex == -1) {
+        if(resSymIndex == -1) {
             error();
         }
 
+        // 标识符索引 构建 操作数1
+        tCodeItem res = {1, resSymIndex};
         sym = lexAna.getWord();
 
         // 标识符后必须有 赋值号
@@ -240,13 +251,20 @@ bool statement() {
         }
         Word assignop = sym;
 
-        // <表达式>翻译
+        // <表达式>翻译；并获取其结果的标识符（可能是立即数）
         sym = lexAna.getWord();
-        expression();
+        tCodeItem op1 = expression();
 
-        // 记录<表达式>结果的对应中间变量索引，并生成中间代码：{resIndex} = {tmp1Index}
-        long tmp1Index = nextSym - 1;
-        gen(FCT(assignop.val.o), {1, tmp1Index}, {(unsigned char)-1, -1}, {1, resIndex});
+        // 生成中间代码：res = op2
+        gen(FCT(assignop.val.o), op1, {(unsigned char)-1, -1}, res);
+        // 维护符号表值
+        long op1Value;
+        if(op1.type == 1) {
+            op1Value = symTable[op1.value].value;
+        } else {
+            op1Value = op1.value;
+        }
+        symTable[res.value].value = op1Value;
 
         // 没有推空
         isNull = false;
@@ -298,6 +316,11 @@ bool statement() {
             sym = lexAna.getWord();
             statement();
 
+            // 循环无条件跳转回<条件>前进行判断
+            gen(FCT::JUP, {(unsigned char)-1, 0}, {(unsigned char)-1, 0}, {0, whileJumpIndex});
+            // 控制语句不满足条件直接跳过<语句>
+            transitionalCodes[jumpCodeIndex].res.value = nextTCode;
+
             isNull = false;
         }
         // 复合语句!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!(TODO：待商讨)
@@ -335,12 +358,10 @@ bool statement() {
 
 // <条件> -> <表达式><关系运算符><表达式>：产生一个 条件goto，待上层程序回填
 void condition() {
-    //直接进入<表达式>，不检查
-    expression();
-    // 记录<表达式>生成的中间变量
-    long tmp1Index = nextSym - 1;
+    //直接进入<表达式>，不检查；并获取其结果对应的符号，作为操作数1
+    tCodeItem op1 = expression();
 
-    // 必须关系运算符
+    // 后面必须为关系运算符
     if(sym.type != OPERATOR) {
         error();
     } else {
@@ -349,33 +370,31 @@ void condition() {
 
         sym = lexAna.getWord();
 
-        // 进入右边 <表达式> 解析
-        expression();
-        // 记录右边<表达式>生成的中间变量
-        long tmp2Index = nextSym - 1;
+        // 进入右边 <表达式> 解析；并获取其结果对应符号，作为操作数2
+        tCodeItem op2 = expression();
 
         // 根据对应关系运算符生成中间代码
         switch (relop.val.o)
         {
             // 根据<关系运算符>反着填入
             case EQ:
-                gen(FCT::JNEQ, {1, tmp1Index}, {1, tmp2Index}, {0, 0});
+                gen(FCT::JNEQ, op1, op2, {0, 0});
                 break;
             case NEQ:
-                gen(FCT::JEQ, {1, tmp1Index}, {1, tmp2Index}, {0, 0});
+                gen(FCT::JEQ, op1, op2, {0, 0});
                 break;
             case GT:
-                gen(FCT::JLE, {1, tmp1Index}, {1, tmp2Index}, {0, 0});
+                gen(FCT::JLE, op1, op2, {0, 0});
                 break;
             case GE:
-                gen(FCT::JLT, {1, tmp1Index}, {1, tmp2Index}, {0, 0});
+                gen(FCT::JLT, op1, op2, {0, 0});
                 break;
             case LT:
-                gen(FCT::JGE, {1, tmp1Index}, {1, tmp2Index}, {0, 0});
+                gen(FCT::JGE, op1, op2, {0, 0});
                 break;
             case LE:
                 //  暂时不填入跳转的地址，等待上层递归回填（这里要反着填？？）
-                gen(FCT::JGT, {1, tmp1Index}, {1, tmp2Index}, {0, 0});
+                gen(FCT::JGT, op1, op2, {0, 0});
                 break;
             default:
                 // 不是任何关系运算符则报错
@@ -388,7 +407,7 @@ void condition() {
 // 从符号表中顺序查找对应的变量/常量
 long position(char* symName) {
     // 如果变量名为空 或 null则返回 -1
-    if(symName == NULL || strlen(symName) == 0) {
+    if(symName == nullptr || strlen(symName) == 0) {
         return -1;
     }
 
@@ -418,8 +437,28 @@ long genTmp(long value) {
     return nextSym - 1;
 }
 
+//传入两个符号，返回其对应的数值
+void getOpValue(tCodeItem& op1, tCodeItem& op2, long& op1Value, long& op2Value) {
+    // 如果op1表示 立即数
+    if(op1.type == 0) {
+        op1Value = op1.value;
+    } else {
+        // 否则为 标识符
+        op1Value = symTable[op1.value].value;
+    }
+    // 如果op2表示 立即数
+    if(op2.type == 0) {
+        op2Value = op2.value;
+    } else {
+        // 否则为 标识符
+        op2Value = symTable[op2.value].value;
+    }
+}
+
 // <因子> -> <标识符>|<无符号整数>|(<表达式>)：产生一个中间变量
-void factor() {
+tCodeItem factor() {
+    tCodeItem ret;
+
     // 标识符
     if(sym.type == IDENTIFIER) {
         // 从开头顺序遍历查找符号表
@@ -430,22 +469,23 @@ void factor() {
             error();
         }
 
-        // 生成中间变量
-        genTmp(symTable[symIndex].value);
+        // 返回标识符
+        ret.type = 1;
+        ret.value = symIndex;
     }
     // 无符号整数
     else if(sym.type == INTEGER) {
         long value = sym.val.i;
 
-        // 生成中间变量
-        genTmp(value);
+        ret.type = 0;
+        ret.value = value;
     }
     // （表达式）
     else if(sym.type == OPERATOR && sym.val.o == LP) {
         sym = lexAna.getWord();
 
         // 进入<表达式>语法分析
-        expression();
+        ret = expression();
 
         // 表达式之后必须有右括号
         if(sym.type != OPERATOR) {
@@ -460,79 +500,103 @@ void factor() {
     }
 
     sym = lexAna.getWord();
+    return ret;
 }
 
 // <项> -> <因子>{<乘法运算符><因子>}：产生中间代码 + 一个中间变量
-void term() {
+tCodeItem term() {
     //直接进入 <因子> 解析，并记录存放结果的中间变量
     Word mulop;
-    factor();
-    long resIndex = nextSym - 1;
+    tCodeItem res;
+    res = factor();
 
-    // 有<乘法运算符>则继续进行解析
+    // 有<乘法运算符>则继续进行解析；同时存在运算，因此必定返回一个中间变量
     while(sym.type == OPERATOR && (sym.val.o == MUL || sym.val.o == DIV)) {
         mulop = sym;
 
         sym = lexAna.getWord();
 
-        factor();
-
-        // 记录存放<因子>结果的中间变量索引
-        long tmp1Index = nextSym - 1;
-        long tmp2Index = resIndex;
+        tCodeItem op2 = factor();
+        tCodeItem op1 = res;
 
         // 生成存放结果的中间变量，并生成对应的中间代码
-        resIndex = genTmp(-1);
-        gen((FCT)mulop.val.o, {1, tmp1Index}, {1, tmp2Index}, {1, resIndex});
+        long resSymIndex = genTmp(-1);
+        res.type = 1;
+        res.value = resSymIndex;
+
+        gen((FCT)mulop.val.o, op1, op2, res);
+
+        // 维护符号表中的值
+        long op1Value, op2Value;
+        getOpValue(op1, op2, op1Value, op2Value);
+        if(mulop.val.o == MUL) {
+            //乘法
+            symTable[res.value].value = op1Value * op2Value;
+        } else {
+            //除法
+            symTable[res.value].value = op1Value / op2Value;
+        }
 
         sym = lexAna.getWord();
     }
+
+    return res;
 }
 
 // <表达式> -> [-|+]<项>{<加法运算符><项>} （生成中间变量 + 中间代码）
-void expression() {
+tCodeItem expression() {
     Word addop;
-    long resIndex = -1; //存放上一次计算的中间变量的符号表索引
+    tCodeItem res;
 
     // 处理正负号（可选）
     if(sym.type == OPERATOR && (sym.val.o == MIN || sym.val.o == PLUS)) {
         addop=sym;                 // 保存正负号
         sym = lexAna.getWord();
 
-        term();     // 正负号后面是一个term
-
-        // 记录<项>生成的中间变量
-        long tmp1Index = nextSym - 1;
+        tCodeItem op2 = term();     // 正负号后面是一个term
 
         // 生成一个中间变量存放结果，并生成一条中间代码进行运算并存储到该中间变量
-        resIndex = genTmp(-1);
-        gen((FCT)sym.val.o, {0, 0}, {1, tmp1Index}, {1, resIndex});    
+        long resSymIndex = genTmp(-1);
+        res.type = 1;
+        res.value = resSymIndex;
+
+        // 单目运算符 res = 0 [+/-] op1
+        gen((FCT)sym.val.o, {0, 0}, op2, res);
     }
     // 若开头无加法运算符，则直接进入“项”递归下降函数
     else {
         // 报错交给<项>
-        term();
-
-        // 记录项产生的中间变量
-        resIndex = nextSym - 1;
+        res = term();
     }
 
-    // 若后面仍有“加法运算符”连接的表达式
+    // 若后面仍有“加法运算符”连接的表达式；则一定产生一个中间变量
     while(sym.type == OPERATOR && (sym.val.o == MIN || sym.val.o == PLUS))
     {
         addop=sym;                 // 保存运算符
         sym = lexAna.getWord();
 
-        term();     // 运算符后是一个term
-
-        // 记录两个操作数的符号表索引
-        long tmp1Index = nextSym - 1;
-        long tmp2Index = resIndex;
+        tCodeItem op2 = term();     // 运算符后是一个term
+        tCodeItem op1 = res;
 
         // 产生一个中间变量存放结果，产生一条中间代码
-        resIndex = genTmp(-1);
-        gen((FCT)sym.val.o, {1, tmp1Index}, {1, tmp2Index}, {1, resIndex});
+        long resSymIndex = genTmp(-1);
+        res.type = 1;
+        res.value = resSymIndex;
+
+        gen((FCT)addop.val.o, op1, op2, res);
+        // 维护符号表的值
+        long op1Value, op2Value;
+        getOpValue(op1, op2, op1Value, op2Value);
+        if(addop.val.o == PLUS) {
+            //加法
+            symTable[res.value].value = op1Value + op2Value;
+        } else {
+            // 减法
+            symTable[res.value].value = op1Value - op2Value;
+        }
     }
+
+    return res;
 }
 
 // <程序> -> PROGRAM<分程序>
@@ -562,8 +626,10 @@ int main() {
     program();
 
     for(int i = 0; i < nextTCode; i++) {
+        std::cout<<i<<": ";
         printTCode(transitionalCodes[i]);
     }
+    printSymTable();
 
 //    test();
 
