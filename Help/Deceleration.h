@@ -68,24 +68,28 @@ namespace LexAna{
         }
     };
 
-    typedef enum{
+    enum class FCT{
         ADD=1, // +
         SUB=2, // -
         MUL=3, // *
         DIV=4, // /
         BEC=5, // :=
-        JEQL=6, // =
+        JEQ=6, // =
         JNEQ=7, // <>
         JGT=8, // >
         JGE=9, // >=
         JLT=10, // <
         JLE=11, // <=
-    }FCT; //中间代码指令
+    }; //中间代码指令
+    struct tCodeItem{   //中间代码操作数（可为直接数/标识符）
+        unsigned char type;      //-1为不需要 0为立即数，1为标识符
+        long value;
+    };
     struct tCode{
         FCT fct;    //指令
-        long p1;    //操作数1符号表索引（地址）
-        long p2;    //操作数2
-        long res;   //结果数
+        tCodeItem p1;    //操作数1符号表索引（地址）
+        tCodeItem p2;    //操作数2
+        tCodeItem res;   //结果数
     };
 
     typedef enum{

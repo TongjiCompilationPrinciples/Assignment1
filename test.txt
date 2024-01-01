@@ -7,4 +7,3 @@ WHILE x<5 DO x:=x+1;
 IF y>0 THEN y:=y-1;
 y:=y+x
 END
-11111111111111111111
