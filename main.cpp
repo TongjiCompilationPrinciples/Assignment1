@@ -44,9 +44,9 @@ int test() {
 FILE *fp=fopen("../test.txt", "r");
 Ana lexAna(fp);
 
-Word sym;   // 当前即将要解析的非终结符
-const long symMax = 2000;
-const long tcMax = 2000;
+Word sym;                           // 当前即将要解析的非终结符
+const long symMax = 2000;           // 符号表最大符号记录个数
+const long tcMax = 2000;            // 中间代码表最大代码记录条数
 SymTableItem symTable[symMax];      //存放已经定义的变量/常量/中间变量的符号表
 tCode transitionalCodes[tcMax];     //存放已经生成的中间代码
 long totalDel = 0;                  //代码中定义的 变量 + 常量 的个数（用于符号表搜索）
@@ -54,7 +54,7 @@ long nextTmp = 0;                   //下一个中间变量的序号
 long nextSym = 0;                   //即将存放符号的符号表索引
 long nextTCode = 0;                 //即将存放中间代码的中间代码表索引
 
-char* fctString[] = {
+std::string fctString[] = {
     "useless",  
 
     "ADD",          // +
@@ -70,8 +70,14 @@ char* fctString[] = {
     "JLE",          // <=
 };
 
+void block();
+void expression();
+void condition();
+bool statement();
+long position(char*);
+
 void error() {
-    std::cout <<"非法输入！" << std::endl;
+    std::cout <<"illegal input!" << std::endl;
     abort();
 }
 
@@ -111,20 +117,6 @@ void printTCode(tCode& code) {
         std::cout<<code.res.value;
     }
     std::cout<<")"<<std::endl;
-}
-
-// <程序> -> PROGRAME<分程序>
-void programe() {
-    if(sym.type == KEYWORD && sym.val.k == PROGRAM) {
-        // 程序开头必须是关键词语“PROGRAME”
-        sym = lexAna.getWord();
-
-        // 进入<分程序>
-        block();
-
-    } else {
-        error();
-    }
 }
 
 // <常量定义> -> <标识符> := <无符号整数>：将对应常量登记到符号表（需要报错）
@@ -187,6 +179,7 @@ void block() {
 
         // 如果后面为“逗号”则循环定义常量
         while(sym.type == OPERATOR && sym.val.o == COMMA) {
+            sym = lexAna.getWord();
             constDeclaration();
         }
 
@@ -206,10 +199,19 @@ void block() {
 
         // 如果为“逗号”则循环定义
         while(sym.type == OPERATOR && sym.val.o == COMMA) {
+            sym = lexAna.getWord();
             varDeclaration();
+        }
+
+        // 变量定义结尾必须有 分号
+        if(sym.type != OPERATOR) {
+            error();
+        } else if(sym.val.o != SEMI) {
+            error();
         }
     }
 
+    sym = lexAna.getWord();
     // 无需报错，直接进入；在<语句>翻译中再进行报错
     statement();
 }
@@ -245,7 +247,7 @@ bool statement() {
         // 记录<表达式>结果的对应中间变量索引，并生成中间代码：{resIndex} = {tmp1Index}
         long tmp1Index = nextSym - 1;
         gen(FCT(assignop.val.o), {1, tmp1Index}, {(unsigned char)-1, -1}, {1, resIndex});
-    
+
         // 没有推空
         isNull = false;
     }
@@ -301,27 +303,33 @@ bool statement() {
         // 复合语句!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!(TODO：待商讨)
         else if(sym.val.k == BEGIN) {
             sym = lexAna.getWord();
-            
-            // 循环解析<语句>
-            while(1) {
-                if(sym.type == KEYWORD && sym.val.k == END) {
-                    break;
-                }
 
-                // 报错留给<语句>
+            // <语句>解析
+            statement();
+
+            // 如果是分号则循环解析<语句>
+            while(sym.type == OPERATOR && sym.val.o == SEMI) {
+                sym = lexAna.getWord();
+
+                //分号后面的<语句>不能推空，直接报错
                 if(statement()) {
-
-                    // 若推空了则报错，因为复合语句中至少有一条语句
                     error();
                 }
             }
 
+            //复合语句后必须有 END
+            if(sym.type != KEYWORD) {
+                error();
+            } else if(sym.val.k != END) {
+                error();
+            }
+
             isNull = false;
+            sym = lexAna.getWord();
         }
     }
 
     //不报错，因为可以推<空>
-    sym = lexAna.getWord();
     return isNull;
 }
 
@@ -375,11 +383,6 @@ void condition() {
                 break;
         }
     }
-
-    
-
-
-    sym = lexAna.getWord();
 }
 
 // 从符号表中顺序查找对应的变量/常量
@@ -438,7 +441,7 @@ void factor() {
         genTmp(value);
     }
     // （表达式）
-    else if(sym.type == OPERATOR && sym.val.k == LP) {
+    else if(sym.type == OPERATOR && sym.val.o == LP) {
         sym = lexAna.getWord();
 
         // 进入<表达式>语法分析
@@ -447,7 +450,7 @@ void factor() {
         // 表达式之后必须有右括号
         if(sym.type != OPERATOR) {
             error();
-        } else if(sym.val.k != RP) {
+        } else if(sym.val.o != RP) {
             error();
         }
     }
@@ -532,15 +535,37 @@ void expression() {
     }
 }
 
+// <程序> -> PROGRAM<分程序>
+void program() {
+    if(sym.type == KEYWORD && sym.val.k == PROGRAM) {
+        // 程序开头必须是关键词语“PROGRAM”
+        sym = lexAna.getWord();
+
+        // 程序必须有<标识符>（PS：由于文法花间后该标识符无用，故掠过）
+        if(sym.type != IDENTIFIER) {
+            error();
+        }
+
+        sym = lexAna.getWord();
+        // 进入<分程序>
+        block();
+
+    } else {
+        error();
+    }
+}
+
 int main() {
 
     sym = lexAna.getWord();
     // 语法分析
-    programe();
+    program();
 
     for(int i = 0; i < nextTCode; i++) {
         printTCode(transitionalCodes[i]);
     }
+
+//    test();
 
     return 0;
 }

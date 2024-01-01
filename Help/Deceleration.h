@@ -18,15 +18,15 @@ namespace LexAna{
     }Type;
 
     typedef enum{
-        PROGRAM=1, // program
-        BEGIN=2, // begin
-        END=3, // end
-        CONST=4, // const
-        VAR=5, // var
-        WHILE=6, // while
-        DO=7, // do
-        IF=8, // if
-        THEN=9 // then
+        PROGRAM=0, // program
+        BEGIN=1, // begin
+        END=2, // end
+        CONST=3, // const
+        VAR=4, // var
+        WHILE=5, // while
+        DO=6, // do
+        IF=7, // if
+        THEN=8 // then
     }KEY; // 关键字的具体类型
 
     typedef enum{
