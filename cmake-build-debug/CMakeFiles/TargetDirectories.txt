@@ -1,3 +1,0 @@
-C:/Users/90457/Code/PL0Compiler/Assignment1/cmake-build-debug/CMakeFiles/compiling.dir
-C:/Users/90457/Code/PL0Compiler/Assignment1/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/90457/Code/PL0Compiler/Assignment1/cmake-build-debug/CMakeFiles/rebuild_cache.dir

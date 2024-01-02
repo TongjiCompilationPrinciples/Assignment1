@@ -88,7 +88,7 @@ namespace LexAna{
     };
     struct tCode{
         FCT fct;    //指令
-        tCodeItem p1;    //操作数1符号表索引（地址）
+        tCodeItem p1;    //操作数1
         tCodeItem p2;    //操作数2
         tCodeItem res;   //结果数
     };

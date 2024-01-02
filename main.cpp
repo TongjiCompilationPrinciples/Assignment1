@@ -605,7 +605,7 @@ void program() {
         // 程序开头必须是关键词语“PROGRAM”
         sym = lexAna.getWord();
 
-        // 程序必须有<标识符>（PS：由于文法花间后该标识符无用，故掠过）
+        // 程序必须有<标识符>（PS：由于文法化简后该标识符无用，故掠过）
         if(sym.type != IDENTIFIER) {
             error();
         }

@@ -1,6 +1,0 @@
-# ninja log v5
-22	492	1703762761391906621	CMakeFiles/compiling.dir/Help/LexAna.cpp.o	1fdc06ca1756dcc4
-550	602	1703766730998421422	compiling	7f2d9808d68ab11b
-0	55	1703823303333516385	build.ninja	a177650fa370f552
-20	550	1703766730943169383	CMakeFiles/compiling.dir/Help/Ana.cpp.o	fcfe397f60390b48
-20	549	1703766730944159726	CMakeFiles/compiling.dir/main.cpp.o	58408c0ac82fdc7f
