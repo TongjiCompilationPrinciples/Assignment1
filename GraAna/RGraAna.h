@@ -11,6 +11,7 @@
 #include<map>
 #include <regex>
 #include<set>
+#define MAX_REC_DEPTH 20
 namespace GraAna{
     enum class RGTYPE{
         RTERMINAL, // 终结符
@@ -48,8 +49,9 @@ namespace GraAna{
         const std::string& filename; // 存储文法的文件名
         std::map<std::string,std::string> _map;// 用于存储非终结符和终结符的映射
         std::map<std::string, RRHS> productions; // 产生式, 注意key没有尖括号
-        std::map<std::string, std::set<std::string>> first; // first集
+        std::map<std::string, std::set<std::string>> first; // first集, 注意key没有尖括号
         std::map<std::string, std::set<std::string>> follow; // follow集
+        std::map<std::string,bool>emptyCache;// 记录某个非终结符是否可以推出空
     private:
         void readGrammar();
         [[nodiscard]] std::string getNonTerminalName(const std::string& production,bool isHead=true) const; // 获取当前产生式开头的非终结符的名称
@@ -61,12 +63,19 @@ namespace GraAna{
         static std::string eleminate_NonTerminalAngleBrackets(const std::string& rhs);
         std::string replaceNonTerminal(const std::string& production,const std::string& other);
         static RUnit buildUnits(const std::string& rhs);
+        std::set<std::string> cal_first(RUnit unit,int depth);
+
     public:
         explicit RGraAna(const std::string& filename):filename(filename){};
         bool init();
-        std::set<std::string> cal_first(RUnit unit,int depth);
+
         void display();
-        bool canBeEmpty(const RUnit& unit);
+        bool canBeEmpty(const RUnit& unit,int depth);
+        bool canBeEmpty(const std::string& name); // 这个name没有尖括号
+        void cal_all_first();
+        std::set<std::string> cal_follow(RUnit unit,int depth);
+        void cal_all_follow();
+
     };
 }
 

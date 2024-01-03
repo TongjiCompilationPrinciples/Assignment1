@@ -258,9 +258,12 @@ GraAna::RUnit GraAna::RGraAna::buildUnits(const std::string &candidate) {
         }
     }
 
-    if(!unit.getUnits().empty()){
+    if(unit.getUnits().size()>1){
         unit.setType(RGTYPE::RMULTI);
         unit.setName(unit.getUnitsName());
+    }
+    else{
+        unit=unit.getUnits()[0];
     }
     return unit;
 }
@@ -389,32 +392,53 @@ std::string GraAna::RGraAna::eleminate_left_recursion(const std::string &name, c
 }
 
 std::set<std::string> GraAna::RGraAna::cal_first(RUnit unit,int depth) {
-    if(depth>20){
+    if(depth>MAX_REC_DEPTH){
         std::cerr<<"递归深度过大"<<std::endl;
         return {};
     }
     if(unit.getType()==RGTYPE::REMPTY){
-        return {};
+        // return first[unit.getName()]={"ε"}; // 不能这么写，因为getName为空字符串
+        return {"ε"};
     }
     std::set<std::string> res;
     if(unit.getType()==RGTYPE::RTERMINAL){
-        res.insert(unit.getName());
+        res.insert(unit.getName().substr(0,1));
+        first[unit.getName()]=res;
         return res;
     }
     if(unit.getType()==RGTYPE::RNON_TERMINAL){
-        std::string name="<"+unit.getName()+">";
+        const std::string& name=unit.getName();
         if(first.find(name)!=first.end()){
             return first[name];
         }
         else{
+            std::string _name="<"+name+">";
             std::set<std::string> _first;
+            if(canBeEmpty(unit, 0)){
+                _first.insert("ε");
+            }
             for(auto& candidate:productions[name].candidates){
-                auto _first=cal_first(candidate,depth+1);
-                _first.insert(_first.begin(),_first.end());
+                auto _temp=cal_first(candidate,depth+1);
+                _first.insert(_temp.begin(),_temp.end());
             }
             first[name]=_first;
             return _first;
         }
+    }
+    if(unit.getType()==RGTYPE::RMULTI){
+        for(auto& child:unit.getUnits()){
+            auto _temp=cal_first(child,depth+1);
+            if(canBeEmpty(child, 0)){
+                res.insert(_temp.begin(),_temp.end());
+                continue;
+            }
+            else{
+                res.insert(_temp.begin(),_temp.end());
+                break;
+            }
+        }
+        first[unit.getName()]=res;
+        return res;
     }
     return {};
 }
@@ -427,28 +451,92 @@ void GraAna::RGraAna::display() {
         }
         out=out.substr(0,out.length()-1);
         std::cout<<out<<std::endl;
+        std::cout<<"can be empty? "<<(canBeEmpty(name)?"yes":"no")<<std::endl;
+        std::cout<<"---------------"<<std::endl;
     }
 }
 
-bool GraAna::RGraAna::canBeEmpty(const GraAna::RUnit &unit) {
+bool GraAna::RGraAna::canBeEmpty(const GraAna::RUnit &unit,int depth) {
+    if(emptyCache.find(unit.getName())!=emptyCache.end()){
+        return emptyCache[unit.getName()];
+    }
+    if(depth>MAX_REC_DEPTH){
+        return emptyCache[unit.getName()]=false;
+    }
     if(unit.getType()==RGTYPE::REMPTY){
-        return true;
+
+        return emptyCache[unit.getName()]=true;
     }
     if(unit.getType()==RGTYPE::RTERMINAL){
         auto name=unit.getName();
         name=std::regex_replace(name,std::regex("\\s+"),"");
         if(name=="ε"||name.empty()){
-            return true;
+            return emptyCache[unit.getName()]=true;
         }
         else{
-            return false;
+            return emptyCache[unit.getName()]=false;
         }
     }
     if(unit.getType()==RGTYPE::RNON_TERMINAL){
-        std::string name="<"+unit.getName()+">";
-        auto production=productions
+        const std::string& name=unit.getName();
+        auto production=productions[name];
+        return emptyCache[unit.getName()]=std::any_of(production.candidates.begin(),production.candidates.end(),[&](const auto& candidate){
+            return canBeEmpty(candidate,depth+1);
+        });
     }
-    return false;
+    if(unit.getType()==RGTYPE::RMULTI){
+       for(auto& child:unit.getUnits()){
+           if(!canBeEmpty(child,depth+1)){
+               return emptyCache[unit.getName()]=false;
+           }
+       }
+       return emptyCache[unit.getName()]=true;
+    }
+    return emptyCache[unit.getName()]=false;
+}
+
+bool GraAna::RGraAna::canBeEmpty(const std::string &name) {
+    auto production=productions[name];
+    return std::any_of(production.candidates.begin(),production.candidates.end(),[&](const auto& candidate){
+        return canBeEmpty(candidate,0);
+    });
+}
+
+void GraAna::RGraAna::cal_all_first() {
+    for(auto&[name,rhs]:productions){
+        for(auto& candidate:rhs.candidates){
+            auto _temp=cal_first(candidate,0);
+            first[name].insert(_temp.begin(),_temp.end());
+        }
+    }
+    for(auto&[name,rhs]:productions){
+        std::string out="first("+name+")={";
+        if(first[name].empty()){
+            out+="}";
+            std::cout<<out<<std::endl;
+            continue;
+        }
+        else{
+            for(auto& item:first[name]){
+                out+=item+",";
+            }
+            out=out.substr(0,out.length()-1);
+            out+="}";
+            std::cout<<out<<std::endl;
+        }
+        for(auto& candidate:rhs.candidates){
+            std::cout<<"\tfirst("+candidate.tostring()+")={";
+            for(auto& item:first[candidate.getName()]){
+                std::cout<<item<<",";
+            }
+            std::cout<<"}"<<std::endl;
+
+        }
+    }
+}
+
+std::set<std::string> GraAna::RGraAna::cal_follow(GraAna::RUnit unit, int depth) {
+
 }
 
 template<typename T>

@@ -43,6 +43,7 @@ int main() {
     GraAna::RGraAna grammer("../grammer.txt");
     grammer.init();
     grammer.display();
+    grammer.cal_all_first();
     //std::cout<<GraAna::RGraAna::eleminate_NonTerminalAngleBrackets("<A><B>ε PROGRAM")<<std::endl;
     std::cout<<"====== GraAna Test End ======"<<std::endl;
 }
