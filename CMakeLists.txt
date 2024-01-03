@@ -6,4 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(compiling main.cpp
         Help/Ana.h
         Help/Ana.cpp
-        Help/Deceleration.h)
+        Help/Deceleration.h
+        Help/GrammerAna.cpp
+        Help/GrammerAna.h
+)

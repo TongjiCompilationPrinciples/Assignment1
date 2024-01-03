@@ -6,6 +6,7 @@ namespace LexAna{
     Ana::Ana(FILE *fp) {
         this->fp=fp;
         this->col=this->row=this->pos=0;
+        consPattern=true;
     }
 
     Word Ana::getWord() {
@@ -190,5 +191,33 @@ namespace LexAna{
         }
         fseek(fp, i, SEEK_SET);
         return word;
+    }
+
+    Ana::Ana(const std::string &fileName) {
+        this->fp=fopen(fileName.c_str(), "r");
+        this->col=this->row=this->pos=0;
+        if(this->fp== nullptr){
+            std::cout<<"打开文件失败"<<std::endl;
+            exit(0);
+        }
+        consPattern=false;
+    }
+
+    void Ana::setfp(const std::string& fileName) {
+        if(!consPattern&&this->fp!= nullptr){ // 如果不是通过文件指针构造的，且文件指针不为空，则关闭文件指针
+            fclose(this->fp);
+        }
+        this->fp=fopen(fileName.c_str(), "r");
+        this->col=this->row=this->pos=0;
+        if(this->fp== nullptr){
+            std::cout<<"打开文件失败"<<std::endl;
+            exit(0);
+        }
+        consPattern=false;
+    }
+
+    void Ana::reset() {
+        fseek(this->fp, 0, SEEK_SET);
+        this->col=this->row=this->pos=0;
     }
 }
