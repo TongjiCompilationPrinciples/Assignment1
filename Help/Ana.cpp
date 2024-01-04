@@ -222,13 +222,33 @@ namespace LexAna{
     }
 
     std::string Ana::getCurrentLine() {
-        long i=ftell(fp);
-        char ch;
-        std::string line;
-        while((ch=fgetc(fp))!='\n'&&ch!=EOF){
-            line+=ch;
+        long originalPos=ftell(fp); // 记录原始位置
+        if (originalPos == -1L) return ""; // ftell失败
+        // 向前搜索换行符，找到行的开始
+        long lineStart = originalPos;
+        while (lineStart > 0) {
+            fseek(fp, --lineStart, SEEK_SET);
+            if (fgetc(fp) == '\n') {
+                // 找到上一行的换行符，移动到下一个字符，即当前行的开头
+                fseek(fp, lineStart + 1, SEEK_SET);
+                break;
+            }
         }
-        fseek(fp, i, SEEK_SET);
+        // 如果已经到达文件开头，设置lineStart为0
+        if (lineStart == 0 && ftell(fp) > 0) {
+            fseek(fp, 0, SEEK_SET);
+        }
+
+        // 读取整行
+        std::string line;
+        int ch;
+        while ((ch = fgetc(fp)) != '\n' && ch != EOF) {
+            line += static_cast<char>(ch);
+        }
+
+        // 恢复原始的文件指针位置
+        fseek(fp, originalPos, SEEK_SET);
+
         return line;
     }
 }
