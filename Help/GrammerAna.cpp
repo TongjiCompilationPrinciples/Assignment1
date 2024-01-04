@@ -86,9 +86,9 @@ tCodeItem GrammerAna::GraAna::expression() {
         if(ifFirst){
             resSymIndex = genTmp(-1);
             ifFirst=false;
+            res.type = 1;
+            res.value = resSymIndex;
         }
-        res.type = 1;
-        res.value = resSymIndex;
 
         gen((FCT)addop.val.o, op1, op2, res);
         // 维护符号表的值
@@ -132,10 +132,10 @@ tCodeItem GrammerAna::GraAna::term() {
         if(isFirst){
             resSymIndex = genTmp(-1);
             isFirst=false;
+            // 上面是新加的
+            res.type = 1;
+            res.value = resSymIndex;
         }
-        // 上面是新加的
-        res.type = 1;
-        res.value = resSymIndex;
 
         gen((FCT)mulop.val.o, op1, op2, res);
 
@@ -150,7 +150,7 @@ tCodeItem GrammerAna::GraAna::term() {
             symTable[res.value].value = op1Value / op2Value;
         }
 
-        getNextWord();
+//        getNextWord();
     }
 
     return res;
@@ -392,7 +392,7 @@ bool GrammerAna::GraAna::statement() {
 
                 //分号后面的<语句>不能推空，直接报错
                 if(statement()) {
-                    error("分号后面必须有语句");
+                    error("复合语句中分号后面必须有语句");
                 }
             }
 
@@ -427,6 +427,9 @@ void GrammerAna::GraAna::block() {
         if(sym.type != OPERATOR||sym.val.o != SEMI) {
             error("常量定义后必须有分号");
         }
+
+        // 若有常量定义则读入下一个字符
+        getNextWord();
     }
 
     // 如果有变量定义
@@ -445,9 +448,11 @@ void GrammerAna::GraAna::block() {
         if(sym.type != OPERATOR||sym.val.o != SEMI) {
             error("变量定义后必须有分号");
         }
+
+        // 如果有<变量定义>才读入下一个字符
+        getNextWord();
     }
 
-    getNextWord();
     // 无需报错，直接进入；在<语句>翻译中再进行报错
     statement();
 }
