@@ -30,9 +30,9 @@ namespace LexAna{
         this->col++;
         // 如果到达了文件末尾，返回_END
         if(ch==EOF){
-            word.row=this->row;
-            word.col=this->col;
-            word.pos=this->pos;
+            word.row=this->row--;
+            word.col=this->col--;
+            word.pos=this->pos--;
             word.type=_END;
             return word;
         }
@@ -219,5 +219,16 @@ namespace LexAna{
     void Ana::reset() {
         fseek(this->fp, 0, SEEK_SET);
         this->col=this->row=this->pos=0;
+    }
+
+    std::string Ana::getCurrentLine() {
+        long i=ftell(fp);
+        char ch;
+        std::string line;
+        while((ch=fgetc(fp))!='\n'&&ch!=EOF){
+            line+=ch;
+        }
+        fseek(fp, i, SEEK_SET);
+        return line;
     }
 }

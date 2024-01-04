@@ -23,6 +23,7 @@ namespace LexAna{
         Word peekWord(int n);
         void setfp(const std::string& fileName);
         void reset();// 重置词法分析器，将文件指针重置到文件开头
+        std::string getCurrentLine();
     private:
         bool consPattern=false; // 是否通过传递文件指针的方式初始化
         FILE *fp{};

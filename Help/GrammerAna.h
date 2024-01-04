@@ -7,6 +7,8 @@
 #include<string>
 #include"Ana.h"
 #include<vector>
+#include<set>
+#include <cstdio>
 namespace GrammerAna{
     class GraAna{
     private:
@@ -23,14 +25,32 @@ namespace GrammerAna{
         void varDeclaration();                      // <标识符>：将对应变量登记到符号表（需要报错）
         void constDeclaration();                    // <常量定义> -> <标识符> := <无符号整数>：将对应常量登记到符号表（需要报错）
         void gen(FCT, tCodeItem, tCodeItem, tCodeItem); // 生成一条中间代码并存入表中
+        void getNextWord();                         // 获取下一个单词
+        void error(const std::string& msg="");                        // 报错
+        static bool validId(const std::string& id);       // 判断标识符是否合法
     public:
-        static const std::vector<std::string>fctStrings;
+        const std::vector<std::string>fctStrings={
+                "useless",
+                "ADD",          // +
+                "SUB",          // -
+                "MUL",          // *
+                "DIV",          // /
+                "BEC",          // :=
+                "JEQL",         // =
+                "JNEQ",         // <>
+                "JGT",          // >
+                "JGE",          // >=
+                "JLT",          // <
+                "JLE",          // <=
+                "JUP",          // jump
+        };
         explicit GraAna(const std::string&sourceCode,const std::string& outputFileName);
         void init();
         void printSymTable();
         void printTCode_c(tCode& code); // 打印中间代码到控制台
         void printTCode_f(tCode& code); // 打印中间代码到文件
-        void error();
+        void printTCode(int opt); // 打印中间代码到文件或控制台, opt=0:控制台，opt=1:文件
+        void start();                               // 开始语法分析
     private:
         FILE *fp;                                   // 输出文件指针
         std::string outputFileName;                 // 输出文件名
@@ -41,25 +61,11 @@ namespace GrammerAna{
 
         SymTableItem symTable[symMax]{};              //存放已经定义的变量/常量/中间变量的符号表
         tCode transitionalCodes[tcMax]{};             //存放已经生成的中间代码
-        long totalDel = 0;                          //代码中定义的 变量 + 常量 的个数（用于符号表搜索）
-        long nextTmp = 0;                           //下一个中间变量的序号
-        long nextSym = 0;                           //即将存放符号的符号表索引
-        long nextTCode = 0;                         //即将存放中间代码的中间代码表索引
-    };
-    const std::vector<std::string> GraAna::fctStrings={
-            "useless",
-            "ADD",          // +
-            "SUB",          // -
-            "MUL",          // *
-            "DIV",          // /
-            "BEC",          // :=
-            "JEQL",         // =
-            "JNEQ",         // <>
-            "JGT",          // >
-            "JGE",          // >=
-            "JLT",          // <
-            "JLE",          // <=
-            "JUP",          // jump
+        long totalDel = 0;                          // 代码中定义的 变量 + 常量 的个数（用于符号表搜索）
+        long nextTmp = 0;                           // 下一个中间变量的序号
+        long nextSym = 0;                           // 即将存放符号的符号表索引
+        long nextTCode = 0;                         // 即将存放中间代码的中间代码表索引
+        std::set<std::string> IDs;                  // 用作标识符查重
     };
 }
 #endif //COMPILING_GRAMMERANA_H
