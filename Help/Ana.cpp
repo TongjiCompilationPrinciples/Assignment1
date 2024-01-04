@@ -5,7 +5,8 @@
 namespace LexAna{
     Ana::Ana(FILE *fp) {
         this->fp=fp;
-        this->col=this->row=this->pos=0;
+        this->row=1;
+        this->col=this->pos=0;
         consPattern=true;
     }
 
@@ -195,7 +196,8 @@ namespace LexAna{
 
     Ana::Ana(const std::string &fileName) {
         this->fp=fopen(fileName.c_str(), "r");
-        this->col=this->row=this->pos=0;
+        this->row=1;
+        this->col=this->pos=0;
         if(this->fp== nullptr){
             std::cout<<"打开文件失败"<<std::endl;
             exit(0);
@@ -208,7 +210,8 @@ namespace LexAna{
             fclose(this->fp);
         }
         this->fp=fopen(fileName.c_str(), "r");
-        this->col=this->row=this->pos=0;
+        this->row=1;
+        this->col=this->pos=0;
         if(this->fp== nullptr){
             std::cout<<"打开文件失败"<<std::endl;
             exit(0);
@@ -218,7 +221,8 @@ namespace LexAna{
 
     void Ana::reset() {
         fseek(this->fp, 0, SEEK_SET);
-        this->col=this->row=this->pos=0;
+        this->row=1;
+        this->col=this->pos=0;
     }
 
     std::string Ana::getCurrentLine() {

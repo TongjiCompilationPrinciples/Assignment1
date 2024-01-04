@@ -62,7 +62,7 @@ struct Word{
     long pos; // 文件中的位置
     Val val{} ; //
     Word(){
-        row=col=pos=0; // 默认为0
+        row=col=pos=1; // 默认为1
         type=ERROR; // 默认为错误
     }
 };
