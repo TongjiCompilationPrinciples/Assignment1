@@ -460,7 +460,7 @@ void GrammerAna::GraAna::varDeclaration() {
         error("变量定义必须有标识符");
     }
     if(IDs.find(sym.val.s) != IDs.end()) { // 标识符重复
-        error("标识符重复");
+        error("标识符定义重复");
     }
     // 记录在符号表中
     symTable[nextSym].type = variable;
@@ -483,7 +483,7 @@ void GrammerAna::GraAna::constDeclaration() {
         error("常量定义必须有标识符");
     }
     if(IDs.find(sym.val.s) != IDs.end()) { // 标识符重复
-        error("标识符重复");
+        error("标识符定义重复");
     }
     // 记录在符号表中
     symTable[nextSym].type = constant;
