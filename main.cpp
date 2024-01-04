@@ -621,7 +621,6 @@ using namespace GrammerAna;
 
 int main() {
    GraAna graAna("../test.txt", "../output.txt");
-   graAna.init();
    graAna.start();
    std::cout<<"=============符号表开始============="<<std::endl;
    graAna.printSymTable();

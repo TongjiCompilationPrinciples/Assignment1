@@ -26,8 +26,9 @@ namespace GrammerAna{
         void constDeclaration();                    // <常量定义> -> <标识符> := <无符号整数>：将对应常量登记到符号表（需要报错）
         void gen(FCT, tCodeItem, tCodeItem, tCodeItem); // 生成一条中间代码并存入表中
         void getNextWord();                         // 获取下一个单词
-        void error(const std::string& msg="");                        // 报错
-        static bool validId(const std::string& id);       // 判断标识符是否合法
+        void error(const std::string& msg="");      // 报错
+        static bool validId(const std::string& id); // 判断标识符是否合法
+        void init();                                // 初始化
     public:
         const std::vector<std::string>fctStrings={
                 "useless",
@@ -45,7 +46,6 @@ namespace GrammerAna{
                 "JUP",          // jump
         };
         explicit GraAna(const std::string&sourceCode,const std::string& outputFileName);
-        void init();
         void printSymTable();
         void printTCode_c(tCode& code); // 打印中间代码到控制台
         void printTCode_f(tCode& code); // 打印中间代码到文件

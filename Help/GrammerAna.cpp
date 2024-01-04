@@ -33,7 +33,7 @@ void GrammerAna::GraAna::program() {
 
         // 程序必须有<标识符>（PS：由于文法化简后该标识符无用，故掠过）
         if(sym.type != IDENTIFIER) {
-            error();
+            error("程序必须有标识符,且标识符必须为小写字母开头");
         }
         else{
             getNextWord();
@@ -41,7 +41,7 @@ void GrammerAna::GraAna::program() {
             block();
         }
     } else {
-        error();
+        error("程序开头必须是关键词“PROGRAM”");
     }
 }
 
@@ -165,7 +165,7 @@ tCodeItem GrammerAna::GraAna::factor() {
 
         // 标识符未定义
         if(symIndex == -1) {
-            error();
+            error("标识符未定义");
         }
 
         // 返回标识符
@@ -186,11 +186,11 @@ tCodeItem GrammerAna::GraAna::factor() {
 
         // 表达式之后必须有右括号
         if(sym.type != OPERATOR||sym.val.o != RP) {
-            error();
+            error("缺少右括号");
         }
     }
     else {// 上述都不是则报错
-        error();
+        error("因子错误,因子必须为标识符/无符号整数/表达式");
     }
 
     getNextWord();
@@ -217,7 +217,7 @@ void GrammerAna::GraAna::getOpValue(tCodeItem &op1, tCodeItem &op2, long &op1Val
 
 long GrammerAna::GraAna::genTmp(long value) {
     if(nextSym >= symMax) {
-        error();
+        error("符号表溢出");
     }
     std::string tmpName = "_TMP" + std::to_string(nextTmp++);
     strcpy(symTable[nextSym].name, (char*)tmpName.c_str());
@@ -249,7 +249,7 @@ void GrammerAna::GraAna::condition() {
 
     // 后面必须为关系运算符
     if(sym.type != OPERATOR) {
-        error();
+        error("条件语句后必须为操作符且为关系运算符");
     } else {
         // 暂存关系运算符号
         Word relop = sym;
@@ -284,7 +284,7 @@ void GrammerAna::GraAna::condition() {
                 break;
             default:
                 // 不是任何关系运算符则报错
-                error();
+                error("条件语句后必须为操作符且为关系运算符");
                 break;
         }
     }
@@ -300,12 +300,12 @@ bool GrammerAna::GraAna::statement() {
 
         //标识符未定义
         if(resSymIndex == -1) {
-            error();
+            error("标识符未定义");
         }
         // 拿到相应的标识符
         SymTableItem resSym = symTable[resSymIndex];
         if(resSym.type == constant) { // 常量不能被赋值
-            error();
+            error("常量不能被赋值");
         }
         // 标识符索引 构建 操作数1
         tCodeItem res = {1, resSymIndex};
@@ -313,7 +313,7 @@ bool GrammerAna::GraAna::statement() {
 
         // 标识符后必须有 赋值号
         if(sym.type != OPERATOR||sym.val.o != ASSIGN) {
-            error();
+            error("赋值语句必须有赋值");
         }
         Word assignop = sym;
 
@@ -345,7 +345,7 @@ bool GrammerAna::GraAna::statement() {
 
             // 后面必须有 then
             if(sym.type != KEYWORD||sym.val.k != THEN) {
-                error();
+                error("条件语句后必须有THEN");
             }
             // <语句>解析
             getNextWord();
@@ -367,7 +367,7 @@ bool GrammerAna::GraAna::statement() {
 
             // 循环语句必须有 DO
             if(sym.type != KEYWORD||sym.val.k != DO) {
-                error();
+                error("循环语句后必须有DO");
             }
             // <语句>解析
             getNextWord();
@@ -392,13 +392,13 @@ bool GrammerAna::GraAna::statement() {
 
                 //分号后面的<语句>不能推空，直接报错
                 if(statement()) {
-                    error();
+                    error("分号后面必须有语句");
                 }
             }
 
             //复合语句后必须有 END
             if(sym.type != KEYWORD||sym.val.k != END) {
-                error();
+                error("复合语句后必须有END");
             }
 
             isNull = false;
@@ -425,7 +425,7 @@ void GrammerAna::GraAna::block() {
 
         // 如果不是分号则报错
         if(sym.type != OPERATOR||sym.val.o != SEMI) {
-            error();
+            error("常量定义后必须有分号");
         }
     }
 
@@ -443,7 +443,7 @@ void GrammerAna::GraAna::block() {
 
         // 变量定义结尾必须有 分号
         if(sym.type != OPERATOR||sym.val.o != SEMI) {
-            error();
+            error("变量定义后必须有分号");
         }
     }
 
@@ -454,10 +454,13 @@ void GrammerAna::GraAna::block() {
 
 void GrammerAna::GraAna::varDeclaration() {
     if(nextSym >= symMax) {
-        error();
+        error("符号表溢出");
     }
     if(sym.type != IDENTIFIER) {
-        error();
+        error("变量定义必须有标识符");
+    }
+    if(IDs.find(sym.val.s) != IDs.end()) { // 标识符重复
+        error("标识符重复");
     }
     // 记录在符号表中
     symTable[nextSym].type = variable;
@@ -473,14 +476,14 @@ void GrammerAna::GraAna::varDeclaration() {
 
 void GrammerAna::GraAna::constDeclaration() {
     if(nextSym >= symMax) {
-        error();
+        error("符号表溢出");
     }
     // 不是标识符直接报错
     if(sym.type != IDENTIFIER) {
-        error();
+        error("常量定义必须有标识符");
     }
     if(IDs.find(sym.val.s) != IDs.end()) { // 标识符重复
-        error();
+        error("标识符重复");
     }
     // 记录在符号表中
     symTable[nextSym].type = constant;
@@ -489,13 +492,13 @@ void GrammerAna::GraAna::constDeclaration() {
     getNextWord();
     // 标识符后必须为赋值符号
     if(sym.type != OPERATOR||sym.val.o != ASSIGN) {
-        error();
+        error("常量定义后必须有赋值符号");
     }
 
     // 赋值后必须为<无符号整型>
     getNextWord();
     if(sym.type != INTEGER) {
-        error();
+        error("常量定义必须有无符号整数");
     }
     symTable[nextSym].value = sym.val.i;
     IDs.insert(symTable[nextSym].name);
@@ -507,7 +510,7 @@ void GrammerAna::GraAna::constDeclaration() {
 
 void GrammerAna::GraAna::gen(FCT op, tCodeItem p1, tCodeItem p2, tCodeItem res) {
     if(nextTCode >= tcMax) {
-        error();
+        error("中间代码表溢出");
     }
     transitionalCodes[nextTCode].fct = op;
     transitionalCodes[nextTCode].p1 = p1;
@@ -597,7 +600,11 @@ void GrammerAna::GraAna::printTCode(int opt) {
 
 void GrammerAna::GraAna::start()
 {
+    init();
     program();
+    if(sym.type != _END) {
+        error("程序结尾必须为END");
+    }
 }
 
 void GrammerAna::GraAna::getNextWord() {
