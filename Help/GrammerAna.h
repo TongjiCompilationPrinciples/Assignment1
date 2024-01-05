@@ -59,8 +59,8 @@ namespace GrammerAna{
         static const long symMax = 2000;            // 符号表最大符号记录个数
         static const long tcMax = 2000;             // 中间代码表最大代码记录条数
 
-        SymTableItem symTable[symMax]{};              //存放已经定义的变量/常量/中间变量的符号表
-        tCode transitionalCodes[tcMax]{};             //存放已经生成的中间代码
+        SymTableItem symTable[symMax]{};            //存放已经定义的变量/常量/中间变量的符号表
+        tCode transitionalCodes[tcMax]{};           //存放已经生成的中间代码
         long totalDel = 0;                          // 代码中定义的 变量 + 常量 的个数（用于符号表搜索）
         long nextTmp = 0;                           // 下一个中间变量的序号
         long nextSym = 0;                           // 即将存放符号的符号表索引
